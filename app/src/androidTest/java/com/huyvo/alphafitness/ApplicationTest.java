@@ -1,4 +1,4 @@
-package com.huyvo.testermap;
+package com.huyvo.alphafitness;
 
 import android.app.Application;
 import android.test.ApplicationTestCase;

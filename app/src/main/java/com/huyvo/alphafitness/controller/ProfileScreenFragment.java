@@ -9,7 +9,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
 import com.huyvo.alphafitness.model.UserProfile;
-import com.huyvo.testermap.R;
+import com.huyvo.alphafitness.R;
 
 
 public class ProfileScreenFragment extends Fragment {

@@ -25,7 +25,7 @@ import com.huyvo.alphafitness.helper.LocationHelper;
 import com.huyvo.alphafitness.helper.StepCountHelper;
 import com.huyvo.alphafitness.model.UserProfile;
 import com.huyvo.alphafitness.model.Utils;
-import com.huyvo.testermap.R;
+import com.huyvo.alphafitness.R;
 
 import java.util.List;
 

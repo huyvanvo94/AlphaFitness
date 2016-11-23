@@ -7,7 +7,7 @@ import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import com.huyvo.testermap.R;
+import com.huyvo.alphafitness.R;
 
 public class PortraitFragment extends Fragment {
     // TODO: Rename parameter arguments, choose names that match

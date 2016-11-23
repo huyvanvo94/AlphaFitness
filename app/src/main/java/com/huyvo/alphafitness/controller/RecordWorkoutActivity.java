@@ -3,7 +3,7 @@ package com.huyvo.alphafitness.controller;
 import android.content.res.Configuration;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import com.huyvo.testermap.R;
+import com.huyvo.alphafitness.R;
 
 public class RecordWorkoutActivity extends AppCompatActivity {
     private static final String TAG = RecordWorkoutActivity.class.getName();

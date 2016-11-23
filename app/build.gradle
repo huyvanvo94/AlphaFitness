@@ -6,7 +6,7 @@ android {
 
     defaultConfig {
 
-        applicationId "com.huyvo.testermap"
+        applicationId "com.huyvo.alphafitness"
         minSdkVersion 18
         targetSdkVersion 23
         versionCode 1
