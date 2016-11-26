@@ -5,13 +5,13 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.util.Log;
+
 import com.huyvo.alphafitness.model.UserProfile;
 
 import java.util.HashMap;
 
 public class UserProfileContentProvider extends ContentProvider {
-    private static final String TAG = UserProfileContentProvider.class.getName();
+    public static final String TAG = UserProfileContentProvider.class.getName();
 
     private static final String TABLE_NAME =  DatabaseScheme.UserTable.NAME;
     public static final String PROVIDER_NAME = "com.huyvo.userprofilecontentprovider";
@@ -20,10 +20,7 @@ public class UserProfileContentProvider extends ContentProvider {
     // The helper
     private UserDBHelper dbHelper;
     // Defines the database name
-    private static final String DBNAME = DatabaseScheme.UserTable.NAME;
-    // Defines the database name
     private SQLiteDatabase db;
-    // URICODE
     private static final int uriCode = 1;
 
     // private static final UriMatcher sUriMatcher;
@@ -50,13 +47,11 @@ public class UserProfileContentProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values){
-        Log.i(TAG, "insert()");
-        long rowID = db.insert(TABLE_NAME, "", values);
-        if(rowID>0)
-        {
+       // long rowID = db.insert(TABLE_NAME, "", values);
+        long rowID = db.insertWithOnConflict(TABLE_NAME, null, values, SQLiteDatabase.CONFLICT_REPLACE);
+        if(rowID>0){
             Uri _uri = ContentUris.withAppendedId(CONTENT_URI, rowID);
             getContext().getContentResolver().notifyChange(_uri, null);
-
             return _uri;
         }
 
@@ -88,25 +83,14 @@ public class UserProfileContentProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-
-        int count = db.delete(TABLE_NAME, selection, selectionArgs);
-
-        return count;
+        return db.delete(TABLE_NAME, selection, selectionArgs);
     }
 
 
     public static ContentValues getContentValues(UserProfile userProfile){
         ContentValues values = new ContentValues();
-
-        values.put(DatabaseScheme.UserTable.Cols.ID, userProfile.getId().toString());
-        values.put(DatabaseScheme.UserTable.Cols.FIRST_NAME, userProfile.getFirstName());
-        values.put(DatabaseScheme.UserTable.Cols.LAST_NAME, userProfile.getLastName());
-        values.put(DatabaseScheme.UserTable.Cols.WEIGHT, userProfile.getWeight());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_DISTANCE, userProfile.getTotalDistance());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_CALORIES_BURNED, userProfile.getTotalCalories());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_WORKOUT_COUNT, userProfile.getTotalWorkoutCount());
-        values.put(DatabaseScheme.UserTable.Cols.WEEK, userProfile.getWeekStr());
-
+        values.put(DatabaseScheme.UserTable.Cols.ID, userProfile.getId());
+        values.put(DatabaseScheme.UserTable.Cols.GSON, userProfile.getGson());
         return values;
     }
 

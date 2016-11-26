@@ -9,7 +9,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
-import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,38 +19,43 @@ public class LocationHelper implements LocationListener {
 
     private List<OnLocationListener> mListeners;
     private LocationManager mLocationManager;
-    private String mLocationProvider;
     private Context mContext;
+    private Location mLocation;
 
     public LocationHelper(Context context) {
         mContext = context;
-
-        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setPowerRequirement(Criteria.POWER_LOW);
-        mLocationProvider =
-                mLocationManager.getBestProvider(criteria, true);
-
-        if (ActivityCompat.checkSelfPermission(mContext,
-                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
-                ActivityCompat.checkSelfPermission(mContext,
-                        Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-
+        mListeners = new ArrayList<>();
+        if (checkPermission()) {
+            Toast.makeText(mContext, "Cannot connect map", Toast.LENGTH_SHORT).show();
             return;
         }
-       // Location mLocation = mLocationManager.getLastKnownLocation(mLocationProvider);
-        mLocationManager.requestLocationUpdates(mLocationProvider, 5000, 2.0f, this);
-        mListeners = new ArrayList<>();
+        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        mLocationManager.requestLocationUpdates( mLocationManager.getBestProvider(getCriteria(), true), 5000, 2.0f, this);
+        mLocation = mLocationManager.getLastKnownLocation(getProvider());
 
 
     }
 
+    private String getProvider(){
+        return mLocationManager.getBestProvider(getCriteria(), true);
+    }
+
+    private Criteria getCriteria(){
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE);
+        criteria.setPowerRequirement(Criteria.POWER_LOW);
+        return criteria;
+    }
+
+    private boolean checkPermission(){
+        return ActivityCompat.checkSelfPermission(mContext,
+                Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ActivityCompat.checkSelfPermission(mContext,
+                        Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED;
+    }
 
     @Override
     public void onLocationChanged(Location location) {
-        Log.i(LocationHelper.class.getName(), "onLocationChanged()");
-
         for (OnLocationListener listener:mListeners)
             listener.onLocationChanged(location);
 
@@ -72,10 +77,13 @@ public class LocationHelper implements LocationListener {
     }
 
     public void addListener(OnLocationListener locationListener) {
+        if(mListeners == null)
+            mListeners = new ArrayList<>();
         mListeners.add(locationListener);
     }
 
     public void removeListener(OnLocationListener locationListener) {
+        if(mListeners == null) return;
         mListeners.remove(locationListener);
     }
 
@@ -84,13 +92,8 @@ public class LocationHelper implements LocationListener {
     }
 
     public Location getLastKnowLocation() {
-        if (ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_FINE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED
-                && ActivityCompat.checkSelfPermission(mContext, Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-
-            return null;
-        }
-        return mLocationManager.getLastKnownLocation(mLocationProvider);
+        if(checkPermission())
+            return mLocation;
+        return mLocationManager.getLastKnownLocation(getProvider());
     }
 }

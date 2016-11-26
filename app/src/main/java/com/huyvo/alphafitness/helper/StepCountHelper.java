@@ -5,8 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.util.Log;
-import com.huyvo.alphafitness.model.Data;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -15,19 +14,16 @@ import static android.content.Context.SENSOR_SERVICE;
 
 
 public class StepCountHelper implements SensorEventListener {
-    //-----------------------------------------------------------------------
     private static final float SHAKE_THRESHOLD_GRAVITY = 22.0f;
     private static final int SHAKE_TIME_LAPSE = 500;
     private long mTimeOfLastShake;
-    //------------------------------------------------------------------------
-    public static boolean DEBUG = true;
+    public static boolean DEBUG = false;
     private static final String TAG = StepCountHelper.class.getName();
 
     private SensorManager mSensorManager;
     private Sensor mStepCounter;
     private Sensor mStepDetector;
     private Sensor mSensorAccelerometer;
-
     private List<OnStepCountListener> mListeners;
 
     public StepCountHelper(Context context){
@@ -37,13 +33,12 @@ public class StepCountHelper implements SensorEventListener {
             mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
 
         }
-        else{
-            if(mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null){
-                mStepCounter = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
-                mStepDetector = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
-                mSensorManager.registerListener(this, mStepCounter, SensorManager.SENSOR_DELAY_UI);
-                mSensorManager.registerListener(this, mStepDetector, SensorManager.SENSOR_DELAY_UI);
-            }
+        else if(mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null){
+            Toast.makeText(context, "OKAY!", Toast.LENGTH_LONG).show();
+            mStepCounter = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+            mStepDetector = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
+            mSensorManager.registerListener(this, mStepCounter, SensorManager.SENSOR_DELAY_UI);
+            mSensorManager.registerListener(this, mStepDetector, SensorManager.SENSOR_DELAY_UI);
         }
 
         mListeners = new ArrayList<>();
@@ -54,14 +49,27 @@ public class StepCountHelper implements SensorEventListener {
         final int value = sensorEvent.sensor.getType();
 
         if(!DEBUG && value==Sensor.TYPE_STEP_DETECTOR){
-            Data.mStepModel.incr();
-
+            notifyListeners();
         }
         else if(value==Sensor.TYPE_ACCELEROMETER){
             detectShake(sensorEvent);
         }
 
+        /**
 
+        Sensor sensor = sensorEvent.sensor;
+        float[] values = sensorEvent.values;
+
+        if (values.length > 0) {
+            value = (int) values[0];
+        }
+
+        if (sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
+
+        } else if (sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
+            // For test only. Only allowed value is 1.0 i.e. for step taken
+
+        }*/
     }
 
     @Override
@@ -82,15 +90,9 @@ public class StepCountHelper implements SensorEventListener {
         float gForce = (float) Math.sqrt(value);
 
         if(gForce>= SHAKE_THRESHOLD_GRAVITY-1){
-
-            Data.mStepModel.incr();
-            Log.i(TAG, String.valueOf(Data.mStepModel.getCount()));
             notifyListeners();
-
         }
     }
-
-
     public void destroy(){
         if(DEBUG){
             mSensorManager.unregisterListener(this, mSensorAccelerometer);

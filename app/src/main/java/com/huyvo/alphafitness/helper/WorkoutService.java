@@ -7,7 +7,6 @@ import android.location.Location;
 import android.os.IBinder;
 import android.util.Log;
 import com.google.android.gms.maps.model.LatLng;
-import com.huyvo.alphafitness.model.Data;
 import com.huyvo.alphafitness.model.Utils;
 
 public class WorkoutService extends Service implements StepCountHelper.OnStepCountListener,
@@ -20,6 +19,10 @@ public class WorkoutService extends Service implements StepCountHelper.OnStepCou
 
     private boolean mLocationChanged = false;
     private boolean mOnStepDetected = false;
+
+    private StepCountHelper mStepCountHelper;
+    private LocationHelper mLocationHelper;
+
 
     public static Intent newIntent(Context context){
         return new Intent(context, WorkoutService.class);
@@ -42,8 +45,15 @@ public class WorkoutService extends Service implements StepCountHelper.OnStepCou
     public void onCreate() {
         Log.i(TAG, "onCreate()");
 
-        mWorkoutManager = new WorkoutManager(Data.userProfile);
+        mWorkoutManager = WorkoutManager.sharedInstance();
 
+        mLocationHelper = new LocationHelper(this);
+        mStepCountHelper = new StepCountHelper(this);
+
+        mLocationHelper.addListener(this);
+        mStepCountHelper.addListener(this);
+
+        /**
         t1 = new Thread(){
             public void run(){
 
@@ -65,11 +75,16 @@ public class WorkoutService extends Service implements StepCountHelper.OnStepCou
         t1.start();
 
 
+        */
+
     }
 
     @Override
     public void onDestroy() {
-        Thread.currentThread().interrupt();
+        //Thread.currentThread().interrupt();
+
+
+
         super.onDestroy();
     }
 

@@ -5,32 +5,29 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
+
 import com.huyvo.alphafitness.data.DatabaseScheme;
 import com.huyvo.alphafitness.data.UserProfileContentProvider;
 import com.huyvo.alphafitness.model.UserProfile;
-import com.huyvo.alphafitness.model.Week;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-// Wrapper class to update
-//
-//
-//
+/**
+ * A class use to manage SQLite
+ */
 public class UserManager {
 
+    private static String TAG = UserManager.class.getName();
     public final static String PREFERENCE_NAME = "com.huyvo.perfence_user";
 
-
-    private static String TAG = UserManager.class.getName();
     private Context mContext;
 
     public UserManager(Context context){
         mContext = context;
     }
 
-    public void deleteUser(UUID uuid){
+    public void deleteUser(String id){
         mContext.getContentResolver().delete(UserProfileContentProvider.CONTENT_URI, null, null);
     }
 
@@ -39,9 +36,38 @@ public class UserManager {
         mContext.getContentResolver().insert(UserProfileContentProvider.CONTENT_URI, values);
     }
 
+    public void addUsers(List<UserProfile> list){
+        for(UserProfile userProfile: list){
+            addUser(userProfile);
+        }
+    }
+
+    public void safelyAddUser(UserProfile userProfile){
+        List<UserProfile> list = getUsers();
+        for(UserProfile users: list){
+            if(userProfile.getId().equals(users.getId())){
+                updateUser(userProfile);
+                return;
+            }
+        }
+
+        addUser(userProfile);
+    }
+
+    public void deleteUsers(List<UserProfile> userProfiles){
+        for(UserProfile userProfile: userProfiles){
+            deleteUser(userProfile.getId());
+        }
+    }
+
+    public void updateUsers(List<UserProfile> userProfiles){
+        for(UserProfile userProfile: userProfiles){
+            updateUser(userProfile);
+        }
+    }
 
     public void updateUser(UserProfile userProfile){
-        String id = userProfile.getId().toString();
+        String id = userProfile.getId();
         mContext.getContentResolver().update(UserProfileContentProvider.CONTENT_URI,
                 UserProfileContentProvider.getContentValues(userProfile), id, null);
     }
@@ -53,6 +79,7 @@ public class UserManager {
         Cursor cursor = mContext.getContentResolver().query(uri, null, null, null, null, null);
 
         try{
+            assert cursor != null;
             cursor.moveToFirst();
             while (!cursor.isAfterLast()){
                 UserProfile userProfile = makeUserProfile(cursor);
@@ -61,35 +88,12 @@ public class UserManager {
             }
 
         }finally {
+            assert cursor != null;
             cursor.close();
         }
 
-        // UserProfile userProfile = UserProfileProvider.getUserProfile(cursor);
-        //Log.i(TAG, userProfile.toString());
-
         return userProfiles;
 
-    }
-
-
-
-    public void savePreference(String first, String last){
-        SharedPreferences.Editor editor =
-                mContext.getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE)
-                        .edit();
-
-        editor.putString(DatabaseScheme.UserTable.Cols.FIRST_NAME, first);
-        editor.putString(DatabaseScheme.UserTable.Cols.LAST_NAME, last);
-        editor.commit();
-    }
-
-    public String[] getPreference(){
-        SharedPreferences sharedPreferences =
-                mContext.getSharedPreferences(PREFERENCE_NAME, Context.MODE_PRIVATE);
-        String firstname = sharedPreferences.getString(DatabaseScheme.UserTable.Cols.FIRST_NAME, null);
-        String lastname = sharedPreferences.getString(DatabaseScheme.UserTable.Cols.LAST_NAME, null);
-
-        return new String[]{firstname, lastname};
     }
 
     /**
@@ -101,43 +105,40 @@ public class UserManager {
         return null;
     }
 
-    static UserProfile makeUserProfile(Cursor cursor){
+    public static UserProfile makeUserProfile(Cursor cursor){
 
         String uuid = cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.ID));
 
-        float totalDistance = cursor.getFloat(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.TOTAL_DISTANCE));
-        float totalCalories = cursor.getFloat(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.TOTAL_CALORIES_BURNED));
-        int totalWorkoutCount = cursor.getInt(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.TOTAL_CALORIES_BURNED));
-
-        String firstName = cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.FIRST_NAME));
-        String lastName = cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.LAST_NAME));
-        float weight = cursor.getFloat(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.WEIGHT));
-
-        Week week = Week.newInstance(cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.WEEK)));
+        String gson = cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.GSON));
 
         return makeUserProfile(
                 uuid,
-                totalDistance,
-                totalCalories,
-                totalWorkoutCount,
-                firstName,
-                lastName,
-                weight,
-                week);
+                gson);
     }
 
-    static UserProfile makeUserProfile(String uuid, float totalDistance,
-                                       float totalCalories, int totalWorkoutCount,
-                                       String firstName, String lastName,
-                                       float weight, Week week) {
-
-        UserProfile userProfile = new UserProfile(firstName,
-                lastName, weight,
-                totalDistance, totalCalories,
-                totalWorkoutCount);
-
-        userProfile.setWeek(week);
+    public static UserProfile makeUserProfile(String uuid, String gson) {
+        UserProfile userProfile = UserProfile.newInstance(gson);
         userProfile.setId(uuid);
         return userProfile;
     }
+
+    private static final String USER_PREF = "com.huyvo.alphafitness.userpref";
+
+    public static void saveUserPreference(Context context, UserProfile userProfile){
+        SharedPreferences mPrefs = context.getSharedPreferences("pref", Context.MODE_PRIVATE);
+        SharedPreferences.Editor prefsEditor = mPrefs.edit();
+        String json = userProfile.getGson();
+        prefsEditor.putString(USER_PREF, json);
+        prefsEditor.apply();
+    }
+
+    public static UserProfile getUserPreference(Context context){
+
+        SharedPreferences mPrefs = context.getSharedPreferences("pref", Context.MODE_PRIVATE);
+        String json = mPrefs.getString(USER_PREF, "");
+        return UserProfile.newInstance(json);
+
+    }
 }
+
+

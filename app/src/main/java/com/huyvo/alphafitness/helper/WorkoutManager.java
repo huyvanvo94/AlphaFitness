@@ -1,42 +1,68 @@
 package com.huyvo.alphafitness.helper;
 
-import android.content.Context;
-import android.util.Log;
 import com.google.android.gms.maps.model.LatLng;
-import com.huyvo.alphafitness.model.Data;
 import com.huyvo.alphafitness.model.StopWatch;
 import com.huyvo.alphafitness.model.UserProfile;
 import com.huyvo.alphafitness.model.Utils;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class WorkoutManager {
-
     private static final String TAG = WorkoutManager.class.getName();
-
-    private StopWatch mStopWatch;
+    private static WorkoutManager mWorkoutManager;
+    private final StopWatch mStopWatch;
     private double mDistance;
     private int mSteps;
-    private List<LatLng> mLatLngList;
+    private List<LatLng> mList;
     private UserProfile mCurrentUser;
+    private Thread mTimeThread;
+    private boolean mTimerStarted;
+    //private List<OnWorkoutManageListener> mListeners;
 
+    private WorkoutManager(){
+        mDistance = 0;
+        mSteps = 0;
 
-    public WorkoutManager(UserProfile userProfile){
-        mCurrentUser = userProfile;
-        mLatLngList = Data.mLatLng;
         mStopWatch = new StopWatch();
+        mTimerStarted = false;
+        mList = new ArrayList<>();
+  //      mListeners = new ArrayList<>();
     }
 
-    public WorkoutManager(){
-
+    public void startStopWatch(){
+        mTimeThread = new Thread(new TimeWorker());
+        mTimeThread.start();
     }
 
-    public void start(){
-       // mTimerThread.start();
+    public boolean timerStarted(){
+        return mTimerStarted;
+    }
+    public void pauseStopWatch(){
+        mStopWatch.pause();
+        mTimerStarted = false;
     }
 
-    public void setUserProfile( UserProfile up){
-        mCurrentUser = up;
+    public String getFormattedTime(){
+        return mStopWatch.getFormattedTime();
+    }
+
+    public static WorkoutManager sharedInstance(){
+        if(mWorkoutManager==null){
+            mWorkoutManager = new WorkoutManager();
+        }
+        return mWorkoutManager;
+    }
+
+    public void reset(){
+        mDistance = 0;
+        mSteps = 0;
+        mList.clear();
+        mTimerStarted = false;
+    }
+
+    public void setUserProfile(UserProfile userProfile){
+        mCurrentUser = userProfile;
     }
 
     public UserProfile getCurrentUser(){
@@ -63,52 +89,58 @@ public class WorkoutManager {
         return mDistance;
     }
 
-    public void incStep(){
+    public synchronized void incStep(){
         mSteps++;
     }
-    public void dcrStep(){
+    public synchronized void dcrStep(){
         mSteps--;
     }
 
-    public boolean computeCurrentDistanceTo(LatLng to){
-        if(mLatLngList.size() == 0) {
-            mLatLngList.add(to);
-            return false;
-        }
-
-        LatLng from = mLatLngList.get(mLatLngList.size()-1);
-        mDistance += Utils.calculateDistance(from, to);
-        Log.i(TAG, String.valueOf(mDistance));
-        mLatLngList.add(to);
-
-        return true;
-
+    public synchronized int getStepCount(){
+        return mSteps;
     }
 
+    public boolean computeCurrentDistanceTo(LatLng to){
+        if(mList.size() == 0) {
+            mList.add(to);
+            return false;
+        }
+        LatLng from = mList.get(mList.size()-1);
+        mDistance += Utils.calculateDistance(from, to);
+        mList.add(to);
+
+        return true;
+    }
     public void updateUserDistance(){
         mCurrentUser.setTodayDistance(mDistance);
     }
     public void updateUserStep(){
         mCurrentUser.setTodaySteps(mSteps);
     }
-
     public List<LatLng> getRoute(){
-        return mLatLngList;
+        return mList;
     }
-
     public void addToRoute(LatLng latLng){
-        mLatLngList.add(latLng);
+        mList.add(latLng);
     }
 
+    public void clearRoute(){
+        mList.clear();
+    }
+
+    public void remote(LatLng ll){
+        mList.remove(ll);
+    }
 
     public String distance(){
         return String.valueOf(Math.round(mDistance*100.0)/100.0) + " miles";
     }
 
 
-    public void updateProfileToDatabase(Context context){
-
+    private class TimeWorker implements Runnable{
+        @Override
+        public void run() {
+            mStopWatch.start();
+        }
     }
-
-
 }

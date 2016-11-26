@@ -2,8 +2,13 @@ package com.huyvo.alphafitness.model;
 
 import android.util.Log;
 
-import java.util.UUID;
+import com.google.gson.Gson;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+
 
 public class UserProfile{
 
@@ -14,7 +19,7 @@ public class UserProfile{
 
     private Week mWeek;
     // ArrayList
-    private UUID mId;
+    private String mId;
     private String mFirstName;
     private String mLastName;
     private float mWeight;
@@ -31,16 +36,17 @@ public class UserProfile{
     //Today
     private int mToday;
     public UserProfile(String id){
-        mId = UUID.fromString(id);
+        mId = id;
     }
 
     public UserProfile(String firstName, String lastName, float weight){
 
-        mId = UUID.randomUUID();
         mFirstName = firstName;
         mLastName = lastName;
         mWeight = weight;
         mGender = "Male";
+
+        mId = mFirstName+mLastName;
 
         mWeek = new Week();
 
@@ -64,6 +70,8 @@ public class UserProfile{
         mTotalWorkoutCount = totalWorkoutCount;
         mTotalCalories = totalCalories;
 
+        mId = mFirstName+mLastName;
+
     }
 
     // -----------TEST-------------------------------------------
@@ -75,6 +83,10 @@ public class UserProfile{
                 new UserProfile("Sara", "Jones", 333)
         };
     }
+
+    public static List<UserProfile> test2(){
+        return new ArrayList<>(Arrays.asList(test()));
+    }
     // --------------------------------------------------------
     public long getTotalTime(){
         return mTotalTime;
@@ -83,7 +95,7 @@ public class UserProfile{
     public void setTotalTime(long time){
         mTotalTime = time;
     }
-    public UUID getId(){
+    public String getId(){
 
         return mId;
     }
@@ -94,9 +106,7 @@ public class UserProfile{
     public int getTotalStepCount(){
         return mTotalStepCount;
     }
-    public void setId(UUID id){
-        mId = id;
-    }
+
 
     public void setFirstName(String firstName){
         mFirstName = firstName;
@@ -139,8 +149,8 @@ public class UserProfile{
     public float getTotalCalories(){
         return mTotalCalories;
     }
-    public void setId(String uuid){
-        mId = UUID.fromString(uuid);
+    public void setId(String id){
+        mId = id;
     }
 
 
@@ -155,7 +165,6 @@ public class UserProfile{
     public Week getWeek(){
         return mWeek;
     }
-
 
     public void setTodayDistance(double d){
         Day today = mWeek.getDay(mToday);
@@ -234,4 +243,14 @@ public class UserProfile{
                 TimeUnit.MILLISECONDS.toSeconds(millis) -
                         TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
     }
+    public String getGson(){
+        Gson gson = new Gson();
+        return gson.toJson(this);
+    }
+
+    public static UserProfile newInstance(String json){
+        Gson gson = new Gson();
+        return gson.fromJson(json, UserProfile.class);
+    }
+
 }

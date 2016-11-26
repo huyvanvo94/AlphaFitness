@@ -16,33 +16,25 @@ public class UserDBHelper extends SQLiteOpenHelper {
     // The version
     private static final int VERSION = 1;
     // Name of the database
-    private static final String DATABASE_NAME = "users.db";
+    private static final String DATABASE_NAME = "test3_users.db";
     // Name of the table
     private static final String TABLE_NAME = "user";
     // Create the table
     private static final String SQL_CREATE = "CREATE TABLE " + TABLE_NAME  +
             "("+
-            DatabaseScheme.UserTable.Cols.ID + " TEXT,"+
-            DatabaseScheme.UserTable.Cols.FIRST_NAME + " TEXT," +
-            DatabaseScheme.UserTable.Cols.LAST_NAME + " TEXT," +
-            DatabaseScheme.UserTable.Cols.WEIGHT + " REAL," +
-            DatabaseScheme.UserTable.Cols.TOTAL_DISTANCE + " REAL,"+
-            DatabaseScheme.UserTable.Cols.TOTAL_CALORIES_BURNED + " REAL,"+
-            DatabaseScheme.UserTable.Cols.TOTAL_WORKOUT_COUNT + " INT,"+
-            DatabaseScheme.UserTable.Cols.WEEK + " TEXT" +
+            DatabaseScheme.UserTable.Cols.ID + " TEXT UNIQUE,"+
+            DatabaseScheme.UserTable.Cols.GSON + " TEXT" +
             ")";
+
+
 
     // Delete the table
     private static final String SQL_DROP = "DROP TABLE IF EXISTS " +
             DatabaseScheme.UserTable.NAME;
 
-
-
     public UserDBHelper(Context context){
         super(context, DATABASE_NAME, null, VERSION);
     }
-
-
 
     @Override
     public void onCreate(SQLiteDatabase db) {
@@ -55,25 +47,17 @@ public class UserDBHelper extends SQLiteOpenHelper {
         onCreate(db);
     }
 
-    public int delete(UUID id){
+    public int delete(String id){
         SQLiteDatabase db = getWritableDatabase();
         return db.delete(TABLE_NAME,
                 DatabaseScheme.UserTable.Cols.ID + " =? ",
-                new String[]{id.toString()});
+                new String[]{id});
     }
 
     public static ContentValues getContentValues(UserProfile userProfile){
         ContentValues values = new ContentValues();
-
-        values.put(DatabaseScheme.UserTable.Cols.ID, userProfile.getId().toString());
-        values.put(DatabaseScheme.UserTable.Cols.FIRST_NAME, userProfile.getFirstName());
-        values.put(DatabaseScheme.UserTable.Cols.LAST_NAME, userProfile.getLastName());
-        values.put(DatabaseScheme.UserTable.Cols.WEIGHT, userProfile.getWeight());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_DISTANCE, userProfile.getTotalDistance());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_CALORIES_BURNED, userProfile.getTotalCalories());
-        values.put(DatabaseScheme.UserTable.Cols.TOTAL_WORKOUT_COUNT, userProfile.getTotalWorkoutCount());
-
-        values.put(DatabaseScheme.UserTable.Cols.WEEK, userProfile.getWeekStr());
+        values.put(DatabaseScheme.UserTable.Cols.ID, userProfile.getId());
+        values.put(DatabaseScheme.UserTable.Cols.GSON, userProfile.getGson());
         return values;
     }
 
@@ -106,8 +90,7 @@ public class UserDBHelper extends SQLiteOpenHelper {
     public void updateUserProfile(UserProfile userProfile){
         SQLiteDatabase db = getWritableDatabase();
 
-        String id = userProfile.getId().toString();
-
+        String id = userProfile.getId();
         ContentValues contentValues = getContentValues(userProfile);
 
         db.update(TABLE_NAME, contentValues,
@@ -141,5 +124,4 @@ public class UserDBHelper extends SQLiteOpenHelper {
 
         return new UserProfileCursorWrapper(cursor);
     }
-
 }

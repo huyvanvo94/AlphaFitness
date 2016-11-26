@@ -2,7 +2,6 @@ package com.huyvo.alphafitness.model;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class StopWatch {
 
@@ -80,13 +79,42 @@ public class StopWatch {
 
     public String getFormattedTime(){
 
-        long millis = getElapsedTime();
+        long milliseconds = getElapsedTime();
+        int seconds = (int) (milliseconds / 1000) % 60 ;
+        int minutes = (int) ((milliseconds / (1000*60)) % 60);
+        int hours   = (int) ((milliseconds / (1000*60*60)) % 24);
 
-        return String.format("%02d:%02d:%02d",
-                TimeUnit.MILLISECONDS.toHours(millis),
-                TimeUnit.MILLISECONDS.toMinutes(millis) -
-                        TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)), // The change is in this line
-                TimeUnit.MILLISECONDS.toSeconds(millis) -
-                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
+        String theSeconds = String.valueOf(seconds);
+
+        if(seconds < 10){
+            theSeconds = "0"+theSeconds;
+        }
+        String theHours = String.valueOf(hours);
+
+        if(hours<10){
+            theHours = "0"+theHours;
+        }
+
+        String theMinutes = String.valueOf(minutes);
+
+        if(minutes < 10){
+            theMinutes = "0"+theMinutes;
+        }
+
+
+        return theHours+":"+theMinutes+":"+theSeconds;
+    }
+
+
+    public long getSeconds(){
+        return (int) (getElapsedTime()/ 1000) % 60;
+    }
+
+    public long getMinutes(){
+        return (int) ((getElapsedTime()/ (1000*60)) % 60);
+    }
+
+    public long getHours(){
+        return (int) ((getElapsedTime() / (1000*60*60)) % 24);
     }
 }

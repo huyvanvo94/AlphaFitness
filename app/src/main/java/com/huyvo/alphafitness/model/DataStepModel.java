@@ -8,8 +8,8 @@ public class DataStepModel {
         mCount = 0;
     }
 
-    public static DataStepModel getDataStepsModel(){
-        if( model == null)
+    public static DataStepModel sharedInstance(){
+        if(model == null)
             model = new DataStepModel();
         return model;
     }
