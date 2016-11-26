@@ -1,6 +1,7 @@
 package com.huyvo.alphafitness.controller;
 
 import android.Manifest;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -27,7 +28,6 @@ import com.google.android.gms.maps.model.PolylineOptions;
 import com.huyvo.alphafitness.R;
 import com.huyvo.alphafitness.helper.LocationHelper;
 import com.huyvo.alphafitness.helper.StepCountHelper;
-import com.huyvo.alphafitness.helper.UserManager;
 import com.huyvo.alphafitness.helper.WorkoutManager;
 import com.huyvo.alphafitness.helper.WorkoutService;
 import com.huyvo.alphafitness.model.UserProfile;
@@ -77,9 +77,11 @@ public class MapWorkoutFragment extends Fragment
         mServiceStarted = false;
         mLocationHelper = new LocationHelper(getActivity());
         mStepCountHelper = new StepCountHelper(getActivity());
-        mWorkoutManager = WorkoutManager.sharedInstance();
-        UserProfile userProfile = UserManager.getUserPreference(getActivity());
-        mWorkoutManager.setUserProfile(userProfile);
+        //
+        UserProfile userProfile = UserProfile.test()[0]; //UserManager.getUserPreference(getActivity());
+        mWorkoutManager = WorkoutManager.sharedInstance(userProfile);
+        mWorkoutManager.turnOffService();
+        //
         mStepCountHelper.addListener(this);
         mLocationHelper.addListener(this);
     }
@@ -155,7 +157,6 @@ public class MapWorkoutFragment extends Fragment
     }
 
     private TextView mTimeTextView;
-
     // Update time for every one second
     private Timer mTimer;
     private void startTimer(){
@@ -179,29 +180,30 @@ public class MapWorkoutFragment extends Fragment
     }
 
     private void initWorkoutButton(final Button mButtonWorkout) {
-        if (mButtonWorkout != null)
+        if (mButtonWorkout != null) {
             if (mWorkoutStarted) {
                 mButtonWorkout.setText(getString(R.string.stop));
             } else {
                 mButtonWorkout.setText(getString(R.string.start));
             }
-        mButtonWorkout.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (!mWorkoutStarted) {
+            mButtonWorkout.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    if (!mWorkoutStarted) {
 
-                    mButtonWorkout.setText(getString(R.string.stop));
-                    startTimer();
-                    startMapView();
-                } else {
-                    mButtonWorkout.setText(getString(R.string.start));
-                    mFindLocationIsBusy = true;
-                    stopTimer();
-                    mWorkoutManager.pauseStopWatch();
+                        mButtonWorkout.setText(getString(R.string.stop));
+                        startTimer();
+                        startMapView();
+                    } else {
+                        mButtonWorkout.setText(getString(R.string.start));
+                        mFindLocationIsBusy = true;
+                        stopTimer();
+                        mWorkoutManager.pauseStopWatch();
+                    }
+                    toggle();
                 }
-                toggle();
-            }
-        });
+            });
+        }
     }
 
     private void toggle() {
@@ -210,10 +212,9 @@ public class MapWorkoutFragment extends Fragment
 
     private void setProfileScreenFragment() {
         mLinearLayout.setVisibility(LinearLayout.INVISIBLE);
-        mProfileScreenFragment.setListener(this);
         getActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .add(R.id.container, ProfileScreenFragment.newInstance())
+                .add(R.id.container, ProfileScreenFragment.newInstance(this))
                 .commit();
     }
 
@@ -271,16 +272,20 @@ public class MapWorkoutFragment extends Fragment
 
         if (mWorkoutStarted && !mServiceStarted) {
             mServiceStarted = true;
-            getActivity().startService(WorkoutService.newIntent(getActivity()));
+            mIntentService = WorkoutService.newIntent(getActivity());
+            getActivity().startService(mIntentService);
         }
     }
+
+    private Intent mIntentService;
 
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy()");
         if (mWorkoutStarted && !mServiceStarted) {
             mServiceStarted = true;
-            getActivity().startService(WorkoutService.newIntent(getActivity()));
+            mIntentService = WorkoutService.newIntent(getActivity());
+            getActivity().startService(mIntentService);
         }
         mLocationHelper.removeListener(this);
         mStepCountHelper.removeListener(this);
@@ -297,6 +302,7 @@ public class MapWorkoutFragment extends Fragment
 
         if(mServiceStarted){
             mServiceStarted = false;
+            getActivity().stopService(mIntentService);
         }
 
         mTimeTextView.setText(mWorkoutManager.getFormattedTime());
@@ -337,9 +343,8 @@ public class MapWorkoutFragment extends Fragment
 
     @Override
     public void onStep() {
-        Log.i(TAG, "onStep()");
-
         if (mStepCountBusy) return;
+        Log.i(TAG, "onStep()");
         mStepCountBusy = true;
         new Thread(new Runnable() {
             @Override

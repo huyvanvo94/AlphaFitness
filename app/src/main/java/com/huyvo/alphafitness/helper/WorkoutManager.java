@@ -1,6 +1,10 @@
 package com.huyvo.alphafitness.helper;
 
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
+import com.huyvo.alphafitness.bagi.CaloriesCounter;
+import com.huyvo.alphafitness.bagi.DistanceCounter;
 import com.huyvo.alphafitness.model.StopWatch;
 import com.huyvo.alphafitness.model.UserProfile;
 import com.huyvo.alphafitness.model.Utils;
@@ -10,6 +14,7 @@ import java.util.List;
 
 public class WorkoutManager {
     private static final String TAG = WorkoutManager.class.getName();
+
     private static WorkoutManager mWorkoutManager;
     private final StopWatch mStopWatch;
     private double mDistance;
@@ -19,7 +24,8 @@ public class WorkoutManager {
     private Thread mTimeThread;
     private boolean mTimerStarted;
     //private List<OnWorkoutManageListener> mListeners;
-
+    private CaloriesCounter mCaloriesCounter;
+    private DistanceCounter mDistanceCounter;
     private WorkoutManager(){
         mDistance = 0;
         mSteps = 0;
@@ -27,6 +33,8 @@ public class WorkoutManager {
         mStopWatch = new StopWatch();
         mTimerStarted = false;
         mList = new ArrayList<>();
+
+
   //      mListeners = new ArrayList<>();
     }
 
@@ -54,6 +62,12 @@ public class WorkoutManager {
         return mWorkoutManager;
     }
 
+    public static WorkoutManager sharedInstance(UserProfile userProfile){
+        WorkoutManager workoutManager = sharedInstance();
+        workoutManager.setUserProfile(userProfile);
+        return workoutManager;
+    }
+
     public void reset(){
         mDistance = 0;
         mSteps = 0;
@@ -63,6 +77,8 @@ public class WorkoutManager {
 
     public void setUserProfile(UserProfile userProfile){
         mCurrentUser = userProfile;
+        mCaloriesCounter = new CaloriesCounter(mCurrentUser);
+        mDistanceCounter = new DistanceCounter();
     }
 
     public UserProfile getCurrentUser(){
@@ -91,9 +107,15 @@ public class WorkoutManager {
 
     public synchronized void incStep(){
         mSteps++;
-    }
-    public synchronized void dcrStep(){
-        mSteps--;
+        if(mCaloriesCounter != null){
+            mCaloriesCounter.onStep();
+            mDistanceCounter.onStep();
+            mCurrentUser.setTodayCalories((float) mCaloriesCounter.getCalories());
+            mCurrentUser.setTodayDistance(mDistanceCounter.getDistance());
+
+            Log.i(TAG, String.valueOf(mDistanceCounter.getDistance()));
+            Log.i(TAG, String.valueOf(mCaloriesCounter.getCalories()));
+        }
     }
 
     public synchronized int getStepCount(){
@@ -142,5 +164,25 @@ public class WorkoutManager {
         public void run() {
             mStopWatch.start();
         }
+    }
+
+    public void turnOffService(){
+        if(mEndServiceListener == null) return;
+        mEndServiceListener.turnOffService();
+    }
+
+    public void setService(EndServiceListener service){
+        mEndServiceListener = service;
+    }
+
+    public void removeService(){
+        mEndServiceListener = null;
+    }
+
+
+    private EndServiceListener mEndServiceListener;
+
+    public interface EndServiceListener {
+        public void turnOffService();
     }
 }

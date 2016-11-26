@@ -28,8 +28,10 @@ public class UserSettingFragment extends Fragment {
     }
 
 
-    public static UserSettingFragment newInstance() {
+    public static UserSettingFragment newInstance(OnListener listener) {
+
         UserSettingFragment fragment = new UserSettingFragment();
+        fragment.setListener(listener);
         return fragment;
     }
 

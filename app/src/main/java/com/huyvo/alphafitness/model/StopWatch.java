@@ -5,6 +5,12 @@ import java.util.List;
 
 public class StopWatch {
 
+    public final static int ONE_MINUTE = 10000;
+
+
+
+
+
     public interface GetTime {
         long now();
     }
@@ -15,7 +21,7 @@ public class StopWatch {
         public long now() {	return System.currentTimeMillis(); }
     };
 
-    public enum State { PAUSED, RUNNING };
+    public enum State { PAUSED, RUNNING }
 
     private GetTime m_time;
     private long m_startTime;
@@ -78,8 +84,10 @@ public class StopWatch {
     }
 
     public String getFormattedTime(){
+        return formatTime(getElapsedTime());
+    }
 
-        long milliseconds = getElapsedTime();
+    public static String formatTime(long milliseconds){
         int seconds = (int) (milliseconds / 1000) % 60 ;
         int minutes = (int) ((milliseconds / (1000*60)) % 60);
         int hours   = (int) ((milliseconds / (1000*60*60)) % 24);

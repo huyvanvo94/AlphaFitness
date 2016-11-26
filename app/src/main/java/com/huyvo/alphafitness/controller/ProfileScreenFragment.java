@@ -11,14 +11,13 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import com.huyvo.alphafitness.R;
+import com.huyvo.alphafitness.helper.Formatter;
 import com.huyvo.alphafitness.helper.WorkoutManager;
 import com.huyvo.alphafitness.model.UserProfile;
 
 
 public class ProfileScreenFragment extends Fragment
     implements UserSettingFragment.OnListener{
-
-    public static String ARG_PROFILE_NAME = "None";
 
     public static String ID = ProfileScreenFragment.class.getName();
     private OnProfileScreenListener mListener;
@@ -30,9 +29,10 @@ public class ProfileScreenFragment extends Fragment
         mListener = listener;
     }
 
-    public static ProfileScreenFragment newInstance() {
+    public static ProfileScreenFragment newInstance(OnProfileScreenListener listener) {
         ProfileScreenFragment profileScreenFragment = new ProfileScreenFragment();
         profileScreenFragment.setUserProfile(WorkoutManager.sharedInstance().getCurrentUser());
+        profileScreenFragment.setListener(listener);
 
         return profileScreenFragment;
     }
@@ -68,8 +68,7 @@ public class ProfileScreenFragment extends Fragment
                     Toast.makeText(getContext(), "Setting User Profile", Toast.LENGTH_SHORT).show();
                     if(mListener != null) {
                         try {
-                            mUserSettingFragment = UserSettingFragment.newInstance();
-                            mUserSettingFragment.setListener(ProfileScreenFragment.this);
+                            mUserSettingFragment = UserSettingFragment.newInstance(ProfileScreenFragment.this);
                             mListener.onUserSetting(mUserSettingFragment);
                         }catch (Exception ex){
                             Toast.makeText(getContext(), "ERROR", Toast.LENGTH_LONG).show();
@@ -81,15 +80,13 @@ public class ProfileScreenFragment extends Fragment
         }
         return rootView;
     }
-
-
-
     private void setDisplayUser(ListView listView) {
 
+        Formatter formatter = new Formatter(mUserProfile);
         ArrayAdapter<String> adapter =
                 new ArrayAdapter<>(getActivity(),
                         android.R.layout.simple_expandable_list_item_1,
-                        mUserProfile.getDisplayToListView());
+                        formatter.display());
 
         listView.setAdapter(adapter);
 

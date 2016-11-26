@@ -7,7 +7,6 @@ import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 
 public class UserProfile{
@@ -35,28 +34,9 @@ public class UserProfile{
 
     //Today
     private int mToday;
-    public UserProfile(String id){
-        mId = id;
-    }
 
     public UserProfile(String firstName, String lastName, float weight){
-
-        mFirstName = firstName;
-        mLastName = lastName;
-        mWeight = weight;
-        mGender = "Male";
-
-        mId = mFirstName+mLastName;
-
-        mWeek = new Week();
-
-        // All Time
-        mTotalDistance = 0;
-        mTotalWorkoutCount = 0;
-        mTotalCalories = 0;
-        mTotalTime = 0;
-
-        mToday = mWeek.getDayOfTheWeek();
+        this(firstName, lastName, weight, 0, 0, 0);
     }
 
     public UserProfile(String firstName, String lastName, float weight,
@@ -69,7 +49,11 @@ public class UserProfile{
         mTotalDistance = totalDistance;
         mTotalWorkoutCount = totalWorkoutCount;
         mTotalCalories = totalCalories;
+        mTotalTime = 0;
 
+        mWeek = new Week();
+        mToday = mWeek.getDayOfTheWeek();
+        mGender = "Male";
         mId = mFirstName+mLastName;
 
     }
@@ -166,11 +150,16 @@ public class UserProfile{
         return mWeek;
     }
 
+    double distance = 0;
     public void setTodayDistance(double d){
         Day today = mWeek.getDay(mToday);
         Log.i(UserProfile.class.getName(), today.getDay());
         today.setDistance(d);
+
+        distance = d;
     }
+
+    private int count = 0;
 
     public void setTodaySteps(int s){
         Day today = mWeek.getDay(mToday);
@@ -212,37 +201,7 @@ public class UserProfile{
 
 
 
-    public String[] getDisplayToListView(){
-        String[] s = new String[13];
-        s[0] = getFirstName()+ " " + getLastName(); // Name
-        s[1] = "Gender:" + getGender();  // gender
-        s[2] = "Weight:" + String.valueOf(getWeight()) + WEIGHT_UNIT; // weight
-        s[3] = "Average/Weekly";
-        s[4] = "Distance:" + String.valueOf(getWeeklyDistance()) + DISTANCE_UNIT;
-        s[5] = "Time:" + getFormattedTime(getWeeklyTime());
-        s[6] = "Workout:" + String.valueOf(getWeeklyWorkoutCount()) + COUNT_UNIT; // weekly workout
-        s[7] = "Calories Burned:" + String.valueOf(getWeeklyCalories()) + CALORIES_UNIT;
-        s[8] = "All Time"; // Label
-        s[9] = "Distance:" + String.valueOf(getTotalDistance())+DISTANCE_UNIT;
-        s[10] = "Time:" + getFormattedTime(getTotalTime());
-        s[11] = "Workouts:" + String.valueOf(getTotalWorkoutCount()) + COUNT_UNIT;
-        s[12] = "Calories Burned:" + String.valueOf(getTotalCalories());
-        return s;
-    }
 
-    public String getWeekStr(){
-        return mWeek.toJson();
-    }
-
-
-    public static String getFormattedTime(long millis){
-        return String.format("%02d:%02d:%02d",
-                TimeUnit.MILLISECONDS.toHours(millis),
-                TimeUnit.MILLISECONDS.toMinutes(millis) -
-                        TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(millis)), // The change is in this line
-                TimeUnit.MILLISECONDS.toSeconds(millis) -
-                        TimeUnit.MINUTES.toSeconds(TimeUnit.MILLISECONDS.toMinutes(millis)));
-    }
     public String getGson(){
         Gson gson = new Gson();
         return gson.toJson(this);

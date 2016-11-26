@@ -5,7 +5,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
-import android.widget.Toast;
+import android.view.OrientationEventListener;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,11 +13,27 @@ import java.util.List;
 import static android.content.Context.SENSOR_SERVICE;
 
 
-public class StepCountHelper implements SensorEventListener {
-    private static final float SHAKE_THRESHOLD_GRAVITY = 22.0f;
+public class StepCountHelper implements SensorEventListener{
+
+   // private final static String TAG = "StepDetector";
+    private float   mLimit = 10;
+    private float   mLastValues[] = new float[3*2];
+    private float   mScale[] = new float[2];
+    private float   mYOffset;
+
+    private float   mLastDirections[] = new float[3*2];
+    private float   mLastExtremes[][] = { new float[3*2], new float[3*2] };
+    private float   mLastDiff[] = new float[3*2];
+    private int     mLastMatch = -1;
+
+    private ArrayList<StepDetector.StepListener> mStepListeners = new ArrayList<>();
+
+
+    private static final float SHAKE_THRESHOLD_GRAVITY = 19.0f;
     private static final int SHAKE_TIME_LAPSE = 500;
-    private long mTimeOfLastShake;
-    public static boolean DEBUG = false;
+    private long mTimeOfLastShake = 0;
+
+    public static boolean DEBUG = true;
     private static final String TAG = StepCountHelper.class.getName();
 
     private SensorManager mSensorManager;
@@ -26,15 +42,23 @@ public class StepCountHelper implements SensorEventListener {
     private Sensor mSensorAccelerometer;
     private List<OnStepCountListener> mListeners;
 
+    private OrientationEventListener orientationEventListener;
+    private int currentOrientation;
+    private Context mContext;
+
+
     public StepCountHelper(Context context){
+        mContext = context;
         mSensorManager = (SensorManager) context.getSystemService(SENSOR_SERVICE);
+
+
         if(DEBUG){
             mSensorAccelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
             mSensorManager.registerListener(this, mSensorAccelerometer, SensorManager.SENSOR_DELAY_UI);
 
         }
         else if(mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) != null){
-            Toast.makeText(context, "OKAY!", Toast.LENGTH_LONG).show();
+
             mStepCounter = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
             mStepDetector = mSensorManager.getDefaultSensor(Sensor.TYPE_STEP_DETECTOR);
             mSensorManager.registerListener(this, mStepCounter, SensorManager.SENSOR_DELAY_UI);
@@ -43,6 +67,8 @@ public class StepCountHelper implements SensorEventListener {
 
         mListeners = new ArrayList<>();
     }
+
+
 
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
@@ -55,21 +81,7 @@ public class StepCountHelper implements SensorEventListener {
             detectShake(sensorEvent);
         }
 
-        /**
 
-        Sensor sensor = sensorEvent.sensor;
-        float[] values = sensorEvent.values;
-
-        if (values.length > 0) {
-            value = (int) values[0];
-        }
-
-        if (sensor.getType() == Sensor.TYPE_STEP_COUNTER) {
-
-        } else if (sensor.getType() == Sensor.TYPE_STEP_DETECTOR) {
-            // For test only. Only allowed value is 1.0 i.e. for step taken
-
-        }*/
     }
 
     @Override
@@ -77,22 +89,32 @@ public class StepCountHelper implements SensorEventListener {
 
     }
 
+    private float last_x = 0;
+    private float last_y = 0;
+    private float last_z = 0;
+
     private void detectShake(SensorEvent sensorEvent){
-        float x = sensorEvent.values[0];
-        float y = sensorEvent.values[1];
-        float z = sensorEvent.values[2];
+        long curTime = System.currentTimeMillis();
+        // only allow one update every 100ms.
+        if ((curTime - mTimeOfLastShake) > 100) {
+            long diffTime = (curTime - mTimeOfLastShake);
+            mTimeOfLastShake = curTime;
 
-        float gForceX = x - SensorManager.GRAVITY_EARTH;
-        float gForceY = y - SensorManager.GRAVITY_EARTH;
-        float gForceZ = z - SensorManager.GRAVITY_EARTH;
+            float x = sensorEvent.values[0];
+            float y = sensorEvent.values[1];
+            float z = sensorEvent.values[2];
 
-        double value = Math.pow(gForceX,2.0)+Math.pow(gForceY,2.0)+Math.pow(gForceZ, 2.0);
-        float gForce = (float) Math.sqrt(value);
+            float speed = Math.abs(x + y + z - last_x - last_y - last_z) / diffTime * 10000;
 
-        if(gForce>= SHAKE_THRESHOLD_GRAVITY-1){
-            notifyListeners();
+            if (speed > SHAKE_THRESHOLD_GRAVITY-1) {
+                notifyListeners();
+            }
+            last_x = x;
+            last_y = y;
+            last_z = z;
         }
     }
+
     public void destroy(){
         if(DEBUG){
             mSensorManager.unregisterListener(this, mSensorAccelerometer);
