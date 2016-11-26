@@ -1,7 +1,5 @@
 package com.huyvo.alphafitness.model;
 
-import com.google.gson.Gson;
-
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -87,19 +85,7 @@ public class Week {
             total += d.getDistance();
         return total;
     }
-    // ----------------------------END--------------------------------------
 
-    public static int idxWeekOfTheYear(){
-        return new GregorianCalendar().get(Calendar.WEEK_OF_YEAR)-1;
-    }
-    public String toJson(){
-        return new Gson().toJson(this);
-    }
-
-    public static Week newInstance(String json) {
-        Gson gson = new Gson();
-        return gson.fromJson(json, Week.class);
-    }
 
     @Override
     public String toString(){
