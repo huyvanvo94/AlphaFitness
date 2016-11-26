@@ -1,7 +1,5 @@
 package com.huyvo.alphafitness.helper;
 
-import android.util.Log;
-
 import com.google.android.gms.maps.model.LatLng;
 import com.huyvo.alphafitness.bagi.CaloriesCounter;
 import com.huyvo.alphafitness.bagi.DistanceCounter;
@@ -11,34 +9,45 @@ import com.huyvo.alphafitness.model.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class WorkoutManager {
     private static final String TAG = WorkoutManager.class.getName();
+    private List<Integer> mStepCountTrack;
+    private List<Double> mCaloriesCountTrack;
 
     private static WorkoutManager mWorkoutManager;
     private final StopWatch mStopWatch;
     private double mDistance;
     private int mSteps;
+    private double mCalories;
     private List<LatLng> mList;
-    private UserProfile mCurrentUser;
+    private UserProfile mCurrentUser = null;
     private Thread mTimeThread;
     private boolean mTimerStarted;
     //private List<OnWorkoutManageListener> mListeners;
     private CaloriesCounter mCaloriesCounter;
     private DistanceCounter mDistanceCounter;
+
+    private Timer mTimer;
     private WorkoutManager(){
         mDistance = 0;
         mSteps = 0;
+        mCalories = 0;
 
         mStopWatch = new StopWatch();
         mTimerStarted = false;
         mList = new ArrayList<>();
+        mStepCountTrack = new ArrayList<>();
+        mCaloriesCountTrack = new ArrayList<>();
 
-
+        updatePeriodically();
   //      mListeners = new ArrayList<>();
     }
 
     public void startStopWatch(){
+        mTimerStarted = true;
         mTimeThread = new Thread(new TimeWorker());
         mTimeThread.start();
     }
@@ -81,6 +90,8 @@ public class WorkoutManager {
         mDistanceCounter = new DistanceCounter();
     }
 
+    //private
+
     public UserProfile getCurrentUser(){
         return mCurrentUser;
     }
@@ -108,13 +119,14 @@ public class WorkoutManager {
     public synchronized void incStep(){
         mSteps++;
         if(mCaloriesCounter != null){
+            mCalories = mCaloriesCounter.getCalories();
+            mDistance = mDistanceCounter.getDistance();
             mCaloriesCounter.onStep();
             mDistanceCounter.onStep();
-            mCurrentUser.setTodayCalories((float) mCaloriesCounter.getCalories());
-            mCurrentUser.setTodayDistance(mDistanceCounter.getDistance());
 
-            Log.i(TAG, String.valueOf(mDistanceCounter.getDistance()));
-            Log.i(TAG, String.valueOf(mCaloriesCounter.getCalories()));
+
+            mCurrentUser.setTodayCalories(mCalories);
+            mCurrentUser.setTodayDistance(mDistance);
         }
     }
 
@@ -133,12 +145,12 @@ public class WorkoutManager {
 
         return true;
     }
-    public void updateUserDistance(){
-        mCurrentUser.setTodayDistance(mDistance);
-    }
-    public void updateUserStep(){
-        mCurrentUser.setTodaySteps(mSteps);
-    }
+   // public void updateUserDistance(){
+    //    mCurrentUser.setTodayDistance(mDistance);
+   // }
+    //public void updateUserStep(){
+    //    mCurrentUser.setTodaySteps(mSteps);
+   // }
     public List<LatLng> getRoute(){
         return mList;
     }
@@ -159,12 +171,7 @@ public class WorkoutManager {
     }
 
 
-    private class TimeWorker implements Runnable{
-        @Override
-        public void run() {
-            mStopWatch.start();
-        }
-    }
+
 
     public void turnOffService(){
         if(mEndServiceListener == null) return;
@@ -183,6 +190,56 @@ public class WorkoutManager {
     private EndServiceListener mEndServiceListener;
 
     public interface EndServiceListener {
-        public void turnOffService();
+        void turnOffService();
     }
+
+    private class TimeWorker implements Runnable{
+        @Override
+        public void run() {
+            mStopWatch.start();
+        }
+    }
+
+
+
+    public List<Integer> getStepCountTrack(){
+        return mStepCountTrack;
+    }
+
+    public List<Double> getCaloriesCountTrack(){
+        return mCaloriesCountTrack;
+    }
+
+
+    private void updatePeriodically(){
+
+        mTimer = new Timer();
+        mTimer.scheduleAtFixedRate(new TimerTask() {
+                @Override
+                public void run() {
+
+
+                    if(mTimerStarted){
+                        mCurrentUser.setTodayTime(mStopWatch.getElapsedTime());
+                    }
+                }
+        }, 0, 1000);
+
+        // test
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                mStepCountTrack.add(mSteps);
+                mCaloriesCountTrack.add(mDistance);
+            }
+        }, 0, StopWatch.ONE_MINUTE);
+
+
+    }
+
+
+
+
+
+
 }
