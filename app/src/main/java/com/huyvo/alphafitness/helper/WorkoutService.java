@@ -5,35 +5,27 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.IBinder;
+import android.os.RemoteException;
 import android.util.Log;
-import com.google.android.gms.maps.model.LatLng;
-import com.huyvo.alphafitness.model.Utils;
 
-/**
- * This class is for counting the steps and location.
- * It is the MapWorkoutFragment but without the UI.
- */
+import com.huyvo.alphafitness.FitnessInterface;
+import com.huyvo.alphafitness.model.StopWatch;
+import com.huyvo.alphafitness.model.UserProfile;
+
+import java.util.Timer;
+import java.util.TimerTask;
+
 public class WorkoutService extends Service implements
         StepCountHelper.OnStepCountListener,
-        LocationHelper.OnLocationListener,
-        WorkoutManager.EndServiceListener {
+        LocationHelper.OnLocationListener{
 
     private static final String TAG = WorkoutService.class.getName();
-    private WorkoutManager mWorkoutManager;
-    private Location mLocation;
-    public Thread t1;
-    private static boolean mWorkoutStarted = false;
-    public final static String MAP_STATE_ID = "MAP_STATE";
-    private static boolean mFindLocationIsBusy = false;
-    private final static String LOCATION_BUSY_STATE = "LOCATION_BUSY_STATE";
-    private static boolean mStepCountBusy = false;
-    private final static String STEP_COUNT_BUSY = "STEP_COUNT_BUSY";
-    private static boolean mServiceStarted = false;
-    private boolean mLocationChanged = false;
-    private boolean mOnStepDetected = false;
 
-    private StepCountHelper mStepCountHelper;
-    private LocationHelper mLocationHelper;
+    FitnessInterface.Stub mBinder;
+
+    private State mState;
+    private Location mLocation;
+
 
     public static Intent newIntent(Context context){
         return new Intent(context, WorkoutService.class);
@@ -41,7 +33,7 @@ public class WorkoutService extends Service implements
 
     @Override
     public IBinder onBind(Intent arg0) {
-        return null;
+        return mBinder;
     }
 
 
@@ -56,24 +48,32 @@ public class WorkoutService extends Service implements
     public void onCreate() {
         Log.i(TAG, "onCreate()");
 
-        mWorkoutManager = WorkoutManager.sharedInstance();
-        mWorkoutManager.setService(this);
+        mBinder = new FitnessInterface.Stub(){
 
-        mLocationHelper = new LocationHelper(this);
-        mStepCountHelper = new StepCountHelper(this);
+            @Override
+            public void start() throws RemoteException {
+                Log.i(TAG, "start");
+                init();
+            }
+        };
 
+    }
+
+    private void init(){
+        LocationHelper mLocationHelper = new LocationHelper(this);
+        StepCountHelper mStepCountHelper = new StepCountHelper(this);
         mLocationHelper.addListener(this);
         mStepCountHelper.addListener(this);
+        mState = new State();
 
+        UserManager userManager = new UserManager(this);
+        saveUserPeriodically(userManager);
     }
 
     @Override
     public void onDestroy() {
-        //Thread.currentThread().interrupt();
         Log.i(TAG, "onDestory()");
-        mLocationHelper.removeListener(this);
-        mStepCountHelper.removeListener(this);
-        mWorkoutManager.removeService();
+
         super.onDestroy();
     }
 
@@ -83,58 +83,62 @@ public class WorkoutService extends Service implements
      * the same method in MapWorkoutFragment.
      */
     @Override
-    public void onLocationChanged(Location location) {
-        if (!mWorkoutStarted) return;
-        mLocation = location; // get location
-        if (mFindLocationIsBusy) return;
-        mFindLocationIsBusy = true;
+    public void onLocationChanged(final Location location) {
+        Log.i(TAG, "onLocationChanged");
 
+        mLocation = location; // get location
+
+        if (mState.onLocationBusy) return;
+        mState.onLocationBusy = true;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                compute();
-                mFindLocationIsBusy = false;
+                WorkoutManager.sharedInstance()
+                        .getMap()
+                        .add(mLocation);
+                mState.onLocationBusy = false;
             }
         }).start();
     }
 
     @Override
     public void onStep() {
-        if (mStepCountBusy) return;
+        if (mState.onStepBusy) return;
         Log.i(TAG, "onStep()");
-        mStepCountBusy = true;
+        mState.onStepBusy = true;
         new Thread(new Runnable() {
             @Override
             public void run() {
-                mWorkoutManager.incStep();
-                Log.i(TAG, String.valueOf(mWorkoutManager.getStepCount()));
-                mWorkoutManager.updateUserStep();
-                mStepCountBusy = false;
+                WorkoutManager.sharedInstance().incStep();
+                mState.onStepBusy = false;
             }
         }).start();
     }
 
-    private void compute(){
-        LatLng to = Utils.getLatLng(mLocation);
-        if(mWorkoutManager.computeCurrentDistanceTo(to)){
-            mWorkoutManager.updateUserDistance();
-        }
+    private void saveUserPeriodically(final UserManager userManager){
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+
+                Log.i(TAG, "saveUserPeriodically()");
+                UserProfile mCurrentUser = WorkoutManager.sharedInstance().getCurrentUser();
+                if(mCurrentUser != null){
+                    userManager.updateUser(mCurrentUser);
+                    UserManager.saveUserPreference(getApplicationContext(), mCurrentUser);
+                }
+            }
+        }, 0, StopWatch.TWO_MINUTE);
     }
 
-    /**
-     * My intention is if the MapWorkoutFragment resume,
-     * that is, the UI is back up, all the work
-     * will be back onto the MapWorkoutFragment.
-     *
-     * WorkoutManager has the interface.
-     * WorkoutService implements the interface.
-     *
-     * Every time when there is a new instance of MapWorkoutFragment,
-     * it will call this method.
-     */
-    @Override
-    public void turnOffService() {
-        Log.i(TAG, "Off");
-        stopSelf();
+    private class State{
+
+        State(){
+            onLocationBusy = false;
+            onStepBusy = false;
+        }
+
+        boolean onLocationBusy;
+        boolean onStepBusy;
     }
+
 }

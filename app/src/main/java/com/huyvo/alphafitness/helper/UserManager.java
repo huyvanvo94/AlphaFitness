@@ -96,15 +96,6 @@ public class UserManager {
 
     }
 
-    /**
-     * TODO:
-     * Look through database
-     * find user from getPreference().
-     */
-    public static UserProfile getUser(){
-        return null;
-    }
-
     public static UserProfile makeUserProfile(Cursor cursor){
 
         String uuid = cursor.getString(cursor.getColumnIndex(DatabaseScheme.UserTable.Cols.ID));
@@ -125,8 +116,12 @@ public class UserManager {
     private static final String USER_PREF = "com.huyvo.alphafitness.userpref";
 
     public static void saveUserPreference(Context context, UserProfile userProfile){
+        if(context==null){
+            return;
+        }
         SharedPreferences mPrefs = context.getSharedPreferences("pref", Context.MODE_PRIVATE);
         SharedPreferences.Editor prefsEditor = mPrefs.edit();
+        assert userProfile != null;
         String json = userProfile.getGson();
         prefsEditor.putString(USER_PREF, json);
         prefsEditor.apply();

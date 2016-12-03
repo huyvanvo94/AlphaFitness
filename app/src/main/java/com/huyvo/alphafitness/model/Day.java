@@ -1,7 +1,5 @@
 package com.huyvo.alphafitness.model;
 
-import com.google.gson.Gson;
-
 public class Day{
 
     public static final String SUN   = "sunday";
@@ -16,21 +14,33 @@ public class Day{
     private double mDistance;
     private long mTime;
     // Total time
-    private int mDidWorkout;
+    private int mWorkoutCount;
     // Total calories burned
-    private float mCaloriesBurned;
+    private double mCaloriesBurned;
     private String mDay;
     private int mStepCount;
+
+    public Day(String day, double distance, long time, int didWorkout, float caloriesBurned,
+                int stepCount){
+
+        mDay = day;
+        mDistance = distance;
+        mTime = time;
+        mWorkoutCount = didWorkout;
+        mCaloriesBurned = caloriesBurned;
+        mStepCount = stepCount;
+    }
 
     public Day(String day){
         mDay = day;
         mDistance = 0;
         mTime = 0;
-        mDidWorkout = 0;
+        mWorkoutCount = 0;
         mCaloriesBurned = 0;
         mStepCount = 0;
 
     }
+
     public void setStepCount(int s){
         mStepCount = s;
     }
@@ -39,28 +49,30 @@ public class Day{
         return mStepCount;
     }
 
-    public double getDistance(){ return mDistance; }
+
     public long getTime(){ return mTime; }
-    public int getDidWorkout(){ return mDidWorkout; }
-    public float getCaloriesBurned(){ return mCaloriesBurned; }
+    public int getWorkoutCount(){ return mWorkoutCount; }
+    public double getCaloriesBurned(){ return mCaloriesBurned; }
 
     public void setDistance(double d){
         mDistance = d;
     }
-
+    public double getDistance(){ return mDistance; }
     public void setTime(long t){
         mTime = t;
     }
 
-    public boolean setDidWorkout(int w){
-        if (w > 1) return false;
-        if(w <0) return false;
+    public boolean setWorkoutCount(int w){
 
-        mDidWorkout = w;
+        mWorkoutCount = w;
         return true;
     }
 
-    public void setCaloriesBurned(float c){
+    public void incWorkoutCount(){
+        mWorkoutCount++;
+    }
+
+    public void setCaloriesBurned(double c){
         mCaloriesBurned = c;
     }
 
@@ -89,33 +101,4 @@ public class Day{
         return 7;
     }
 
-    public static Day newInstance(String day, double distance, long time, float cal, int w, int s) {
-        Day d = new Day(day);
-        d.setDistance(distance);
-        d.setTime(time);
-        d.setCaloriesBurned(cal);
-        d.setDidWorkout(w);
-        d.setStepCount(s);
-        return d;
-    }
-
-    public String toJson(){
-        return new Gson().toJson(this);
-    }
-
-    public static Day newInstance(String json){
-        return new Gson().fromJson(json, Day.class);
-    }
-
-    @Override
-    public String toString() {
-        return "Day{" +
-                "mDistance=" + mDistance +
-                ", mTime=" + mTime +
-                ", mDidWorkout=" + mDidWorkout +
-                ", mCaloriesBurned=" + mCaloriesBurned +
-                ", mDay='" + mDay + '\'' +
-                ", mStepCount=" + mStepCount +
-                '}';
-    }
 }

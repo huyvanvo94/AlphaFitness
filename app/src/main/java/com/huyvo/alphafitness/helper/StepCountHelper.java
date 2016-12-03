@@ -15,20 +15,6 @@ import static android.content.Context.SENSOR_SERVICE;
 
 public class StepCountHelper implements SensorEventListener{
 
-   // private final static String TAG = "StepDetector";
-    private float   mLimit = 10;
-    private float   mLastValues[] = new float[3*2];
-    private float   mScale[] = new float[2];
-    private float   mYOffset;
-
-    private float   mLastDirections[] = new float[3*2];
-    private float   mLastExtremes[][] = { new float[3*2], new float[3*2] };
-    private float   mLastDiff[] = new float[3*2];
-    private int     mLastMatch = -1;
-
-    private ArrayList<StepDetector.StepListener> mStepListeners = new ArrayList<>();
-
-
     private static final float SHAKE_THRESHOLD_GRAVITY = 19.0f;
     private static final int SHAKE_TIME_LAPSE = 500;
     private long mTimeOfLastShake = 0;

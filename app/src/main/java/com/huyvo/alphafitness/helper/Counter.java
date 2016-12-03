@@ -61,12 +61,13 @@ public class Counter {
         Log.i(TAG, "mCalories="+String.valueOf(mCalories));
         Log.i(TAG, "mSteps="+String.valueOf(mSteps));
     }
+
     public int getSteps(){
         return mSteps;
     }
 
     public void computeDistance(){
-        mDistance += 1; //STEP_LENGTH / 6336.0; // inches/miles
+        mDistance += 0.000473485;
     }
 
     public void computeCalories(){

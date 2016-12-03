@@ -28,6 +28,20 @@ android {
         main {
             aidl.srcDirs = ['src/main/aidl']
         }
+        androidTest {
+            java.srcDirs = ['androidTest/java']
+        }
+
+    }
+    testOptions {
+        unitTests.all {
+            // All the usual Gradle options.
+            testLogging {
+                events "passed", "skipped", "failed", "standardOut", "standardError"
+                outputs.upToDateWhen {false}
+                showStandardStreams = true
+            }
+        }
     }
 }
 

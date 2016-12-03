@@ -5,6 +5,8 @@ import java.util.Date;
 import java.util.GregorianCalendar;
 
 public class Week {
+
+    private static final String TAG = Week.class.getName();
     // Contains each day
     private Day[] mDays;
     private int mWeekOfTheYear; // int
@@ -17,7 +19,7 @@ public class Week {
         mCalendar = new GregorianCalendar();
         mWeekOfTheYear = mCalendar.get(Calendar.WEEK_OF_YEAR);
         mMonthOfTheYear = mCalendar.get(Calendar.MONTH);
-        mDayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK);
+        mDayOfTheWeek = mCalendar.get(Calendar.DAY_OF_WEEK)-1;
 
         mDays = new Day[]{
                 new Day(Day.SUN),
@@ -34,9 +36,6 @@ public class Week {
         return mDayOfTheWeek;
     }
 
-    public void setWeekOfTheYear(int w){
-        mWeekOfTheYear = w;
-    }
 
     public int getWeekOfTheYear(){
         return mWeekOfTheYear;
@@ -60,7 +59,7 @@ public class Week {
     public long getWeeklyTime(){
         long total = 0;
         for(Day d: mDays){
-            total = d.getTime();
+            total += d.getTime();
         }
         return total;
     }
@@ -68,36 +67,26 @@ public class Week {
     public int getWeeklyWorkedOut(){
         int total = 0;
         for(Day d: mDays)
-            total += d.getDidWorkout();
+            total += d.getWorkoutCount();
         return total;
     }
 
-    public float getWeeklyCaloriesBurned(){
-        float total = 0;
+    public double getWeeklyCaloriesBurned(){
+        double total = 0;
         for(Day d:mDays)
-            total = d.getCaloriesBurned();
+            total += d.getCaloriesBurned();
+
         return total;
     }
 
     public float getWeeklyDistance(){
         float total = 0;
-        for(Day d: mDays)
+        for(Day d: mDays) {
             total += d.getDistance();
+        }
         return total;
     }
 
-
-    @Override
-    public String toString(){
-        StringBuilder sb = new StringBuilder();
-
-        for (Day d: mDays){
-            sb.append(d.toString());
-            sb.append('\n');
-        }
-
-        return sb.toString();
-    }
 
 
 }

@@ -1,7 +1,9 @@
 package com.huyvo.alphafitness.controller;
 
 import android.Manifest;
-import android.content.Intent;
+import android.app.Activity;
+import android.content.Context;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -17,73 +19,69 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapView;
 import com.google.android.gms.maps.MapsInitializer;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolylineOptions;
 import com.huyvo.alphafitness.R;
+import com.huyvo.alphafitness.helper.Formatter;
 import com.huyvo.alphafitness.helper.LocationHelper;
 import com.huyvo.alphafitness.helper.StepCountHelper;
+import com.huyvo.alphafitness.helper.UserManager;
 import com.huyvo.alphafitness.helper.WorkoutManager;
-import com.huyvo.alphafitness.helper.WorkoutService;
+import com.huyvo.alphafitness.model.StopWatch;
 import com.huyvo.alphafitness.model.UserProfile;
-import com.huyvo.alphafitness.model.Utils;
 
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import static com.huyvo.alphafitness.model.Utils.LEVEL_ZOOM;
-import static com.huyvo.alphafitness.model.Utils.getLatLng;
 // The controller class to
 // implement map view
 public class MapWorkoutFragment extends Fragment
         implements LocationHelper.OnLocationListener,
-        StepCountHelper.OnStepCountListener,
-        ProfileScreenFragment.OnProfileScreenListener {
+        StepCountHelper.OnStepCountListener{
 
     public final static String TAG = MapWorkoutFragment.class.getName();
+    private OnListener mListener;
+    public static final int DRAW_ROUTE       = 1;
+    public static final int DISPLAY_DISTANCE = 2;
 
     private TextView mDistanceTextView;
     private LinearLayout mLinearLayout;
-    // Variables to be saved.
-    private static boolean mWorkoutStarted = false;
-    public final static String MAP_STATE_ID = "MAP_STATE";
-    private static boolean mFindLocationIsBusy = false;
-    private final static String LOCATION_BUSY_STATE = "LOCATION_BUSY_STATE";
-    private static boolean mStepCountBusy = false;
-    private final static String STEP_COUNT_BUSY = "STEP_COUNT_BUSY";
-    private static boolean mServiceStarted = false;
-    // End
-    private static GoogleMap mGoogleMap;
     private MapView mMapView;
-    // Variables for maps
     private LocationHelper mLocationHelper;
     private StepCountHelper mStepCountHelper;
     private Location mLocation;
     private WorkoutManager mWorkoutManager;
+    private static MapController mMapController;
 
     public static MapWorkoutFragment newInstance() {
         return new MapWorkoutFragment();
     }
 
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        mServiceStarted = false;
+
+        Log.i(TAG, "onCreate");
+
+        State.serviceStarted = false;
+
         mLocationHelper = new LocationHelper(getActivity());
         mStepCountHelper = new StepCountHelper(getActivity());
         //
-        UserProfile userProfile = UserProfile.test()[0]; //UserManager.getUserPreference(getActivity());
-        mWorkoutManager = WorkoutManager.sharedInstance(userProfile);
-        mWorkoutManager.turnOffService();
+        mWorkoutManager = WorkoutManager.sharedInstance();
         //
         mStepCountHelper.addListener(this);
         mLocationHelper.addListener(this);
+
+        UserManager userManager = new UserManager(getContext());
+
+        saveUserPeriodically(userManager);
+
     }
 
     @Override
@@ -100,12 +98,12 @@ public class MapWorkoutFragment extends Fragment
         mMapView.getMapAsync(new OnMapReadyCallback() {
             @Override
             public void onMapReady(GoogleMap googleMap) {
-                mGoogleMap = googleMap;
+
                 if (checkPermission()) {
                     return;
                 }
-                mGoogleMap.setMyLocationEnabled(true);
-                mGoogleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
+                googleMap.setMyLocationEnabled(true);
+                googleMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
                     @Override
                     public void onMapClick(LatLng latLng) {
                         Button button = (Button) rootView.findViewById(R.id.recenter_start);
@@ -116,8 +114,11 @@ public class MapWorkoutFragment extends Fragment
                         }
                     }
                 });
+
+                mMapController = new MapController(googleMap);
                 // Check if the view is resuming or not
-                if(mWorkoutStarted) {
+                if(State.workoutStarted) {
+                    Log.i(TAG, "Starting MapView");
                     startMapView();
                 }
 
@@ -128,12 +129,10 @@ public class MapWorkoutFragment extends Fragment
         mCenterScreen.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                int size = mWorkoutManager.getRoute().size();
-                if (size == 0)
+                if (mWorkoutManager.getMap().size() == 0)
                     return;
-
-                LatLng ll = mWorkoutManager.getRoute().get(size - 1);
-                zoomCamera(ll);
+                LatLng ll = mWorkoutManager.getMap().getLast();
+                mMapController.zoomCamera(ll);
             }
         });
         mLinearLayout = (LinearLayout) rootView.findViewById(R.id.container_2);
@@ -151,8 +150,10 @@ public class MapWorkoutFragment extends Fragment
         }
 
         mTimeTextView = (TextView) rootView.findViewById(R.id.time_text_view);
-        //initTimerView(mTimeTextView);
+
         mDistanceTextView = (TextView) rootView.findViewById(R.id.distance_text_view);
+
+
         return rootView;
     }
 
@@ -181,7 +182,7 @@ public class MapWorkoutFragment extends Fragment
 
     private void initWorkoutButton(final Button mButtonWorkout) {
         if (mButtonWorkout != null) {
-            if (mWorkoutStarted) {
+            if (State.workoutStarted) {
                 mButtonWorkout.setText(getString(R.string.stop));
             } else {
                 mButtonWorkout.setText(getString(R.string.start));
@@ -189,14 +190,14 @@ public class MapWorkoutFragment extends Fragment
             mButtonWorkout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View view) {
-                    if (!mWorkoutStarted) {
 
+                    if (!State.workoutStarted) {
                         mButtonWorkout.setText(getString(R.string.stop));
                         startTimer();
                         startMapView();
                     } else {
                         mButtonWorkout.setText(getString(R.string.start));
-                        mFindLocationIsBusy = true;
+                        State.onLocationBusy = true;
                         stopTimer();
                         mWorkoutManager.pauseStopWatch();
                     }
@@ -206,60 +207,71 @@ public class MapWorkoutFragment extends Fragment
         }
     }
 
-    private void toggle() {
-        mWorkoutStarted = !mWorkoutStarted;
+    private void toggle()
+    {
+        State.workoutStarted = !State.workoutStarted;
     }
 
+    private ProfileScreenFragment profileScreenFragment;
+
     private void setProfileScreenFragment() {
+        profileScreenFragment = ProfileScreenFragment.newInstance();
         mLinearLayout.setVisibility(LinearLayout.INVISIBLE);
         getActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .add(R.id.container, ProfileScreenFragment.newInstance(this))
+                .add(R.id.container,  profileScreenFragment)
+                .commit();
+    }
+
+    public void replaceFragment(Fragment fragment){
+        getActivity()
+                .getSupportFragmentManager()
+                .beginTransaction()
+                .replace(R.id.container, fragment)
                 .commit();
     }
 
     private void startMapView() {
-        if (mGoogleMap == null || checkPermission()) return;
+        if (checkPermission()) return;
+
+        mMapController.clear();
         mLocation = mLocationHelper.getLastKnowLocation();
-        LatLng ll = getLatLng(mLocation);
-        mWorkoutManager.addToRoute(ll);
-        zoomCamera(ll);
-    }
+        if(mLocation == null){
+            Log.i(TAG, "mLocation is null");
+        }
 
-    private void zoomCamera(LatLng ll) {
-        mGoogleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(ll, LEVEL_ZOOM));
-        mGoogleMap.addMarker(new MarkerOptions()
-                .title("You are here")
-                .position(ll));
-    }
-
-    private void drawRoute(List<LatLng> theRoute) {
-        if(mGoogleMap == null){
-            Log.i(TAG, "GoogleMap NULL");
+        if(!mMapController.startView(mLocation)) {
             return;
         }
-        mGoogleMap.clear();
-        PolylineOptions polylineOptions = new PolylineOptions();
-        for (LatLng ll : theRoute) {
-            polylineOptions.add(ll);
+
+        mWorkoutManager
+                .getMap()
+                .add(mLocation);
+    }
+
+    private void drawRoute(List<LatLng> route) {
+        if(!mMapController.drawRoute(route)){
+            return;
         }
-        mGoogleMap.addPolyline(polylineOptions);
-        LatLng mLat = theRoute.get(theRoute.size() - 1);
-        zoomCamera(mLat);
+        LatLng latLng = route.get(route.size() - 1);
+        mMapController.zoomCamera(latLng);
     }
 
     @Override
     public void onLocationChanged(Location location) {
-        if (!mWorkoutStarted) return;
+        Log.i(TAG, "onLocationChanged");
+        if (!State.workoutStarted) return;
         mLocation = location; // get location
-        if (mFindLocationIsBusy) return;
-        mFindLocationIsBusy = true;
+        if (State.onLocationBusy) return;
+        State.onLocationBusy = true;
 
         new Thread(new Runnable() {
             @Override
             public void run() {
-                compute();
-                mFindLocationIsBusy = false;
+                if(addToMap())
+                    mHandler.sendEmptyMessage(DRAW_ROUTE);
+
+                State.onLocationBusy = false;
             }
         }).start();
     }
@@ -270,28 +282,32 @@ public class MapWorkoutFragment extends Fragment
         Log.i(TAG, "onPause()");
         mMapView.onPause();
 
-        if (mWorkoutStarted && !mServiceStarted) {
-            mServiceStarted = true;
-            mIntentService = WorkoutService.newIntent(getActivity());
-            getActivity().startService(mIntentService);
+        if (State.workoutStarted && !State.serviceStarted) {
+            State.serviceStarted = true;
+
+            mListener.startService();
+        }
+
+
+
+        if(profileScreenFragment != null){
+            getActivity().
+                    getSupportFragmentManager()
+                    .beginTransaction()
+                    .remove(profileScreenFragment)
+                    .commit();
         }
     }
-
-    private Intent mIntentService;
 
     @Override
     public void onDestroy() {
         Log.i(TAG, "onDestroy()");
-        if (mWorkoutStarted && !mServiceStarted) {
-            mServiceStarted = true;
-            mIntentService = WorkoutService.newIntent(getActivity());
-            getActivity().startService(mIntentService);
-        }
         mLocationHelper.removeListener(this);
         mStepCountHelper.removeListener(this);
         mMapView.onDestroy();
         super.onDestroy();
     }
+
 
     @Override
     public void onResume() {
@@ -300,26 +316,33 @@ public class MapWorkoutFragment extends Fragment
         mLocationHelper.addListener(this);
         mStepCountHelper.addListener(this);
 
-        if(mServiceStarted){
-            mServiceStarted = false;
-            getActivity().stopService(mIntentService);
+        if(State.serviceStarted){
+            State.serviceStarted = false;
+            mListener.stopService();
         }
 
         mTimeTextView.setText(mWorkoutManager.getFormattedTime());
-
-        if(mWorkoutStarted) {
-          //  startMapView();
-            startTimer();
-            mLocation = mLocationHelper.getLastKnowLocation();
-            compute();
-           // drawRoute(mWorkoutManager.getRoute());
-            //displayDistance(mWorkoutManager.distance());
-        }
-       //
         mMapView.onResume();
+        if(State.workoutStarted) {
+            startTimer();
+            startMapView();
+            mLocation = mLocationHelper.getLastKnowLocation();
+            if(addToMap()) {
+                mHandler.sendEmptyMessage(DRAW_ROUTE);
+            }
+           mHandler.sendEmptyMessage(DISPLAY_DISTANCE);
+        }
+    }
+    @Override
+    public void setUserVisibleHint(boolean isVisibleToUser) {
+        super.setUserVisibleHint(isVisibleToUser);
+        if(isVisibleToUser) {
+            Activity a = getActivity();
+            if(a != null && profileScreenFragment != null)
+                a.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        }
     }
 
-    @Override
     public void remove(Fragment fragment) {
         getActivity().
                 getSupportFragmentManager()
@@ -334,25 +357,17 @@ public class MapWorkoutFragment extends Fragment
     }
 
     @Override
-    public void onUserSetting(UserSettingFragment userSettingFragment) {
-        getActivity().getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.container, userSettingFragment)
-                .commit();
-    }
-
-    @Override
     public void onStep() {
-        if (mStepCountBusy) return;
+        if(!State.workoutStarted) return;
+        if (State.onStepBusy) return;
         Log.i(TAG, "onStep()");
-        mStepCountBusy = true;
+        State.onStepBusy = true;
         new Thread(new Runnable() {
             @Override
             public void run() {
                 mWorkoutManager.incStep();
-                Log.i(TAG, String.valueOf(mWorkoutManager.getStepCount()));
-                mWorkoutManager.updateUserStep();
-                mStepCountBusy = false;
+                mHandler.sendEmptyMessage(DISPLAY_DISTANCE);
+                State.onStepBusy = false;
             }
         }).start();
     }
@@ -364,20 +379,31 @@ public class MapWorkoutFragment extends Fragment
         mMapView.onLowMemory();
     }
 
-    private void compute() {
-        if (checkPermission()) {
-            return;
+    private boolean addToMap() {
+        if(mLocation == null) {
+            Log.i(TAG, "mLocation is null");
+            return false;
         }
-        LatLng to = Utils.getLatLng(mLocation);
-        if (mWorkoutManager.computeCurrentDistanceTo(to)) {
-            mWorkoutManager.updateUserDistance();
-            mHandler.sendEmptyMessage(0); // drawRoute
-        }
+        return mWorkoutManager.getMap().add(mLocation);
     }
 
-    private void displayDistance(String distance) {
+    private boolean addToMap(LatLng latLng){
+        return mWorkoutManager.getMap().add(latLng);
+    }
+
+    private void displayDistance() {
+        Log.i(TAG, mWorkoutManager.getCurrentUser().getFirstName());
+        Log.i(TAG, mWorkoutManager.getCurrentUser().getToday().getDay());
+        double distance = mWorkoutManager.getDistance();
+
         if (mDistanceTextView != null) {
-            mDistanceTextView.setText(distance);
+            Log.i(TAG, "displayDistance()");
+            Log.i(TAG, "distance="+String.valueOf(distance));
+            mDistanceTextView.setText(
+                    Formatter.appendString(Formatter.formatNumber(distance),
+                    Formatter.SPACE,
+                    UserProfile.DISTANCE_UNIT)
+            );
         }
     }
     private final Handler mHandlerTime = new Handler(){
@@ -388,8 +414,16 @@ public class MapWorkoutFragment extends Fragment
 
     private final Handler mHandler = new Handler(){
         public void handleMessage(Message msg){
-            drawRoute(mWorkoutManager.getRoute());
-            displayDistance(mWorkoutManager.distance());
+            Log.i(TAG, "mHandler");
+            if(msg.what == DRAW_ROUTE) {
+                drawRoute(mWorkoutManager
+                        .getMap()
+                        .getRoute());
+            }
+
+            else if(msg.what == DISPLAY_DISTANCE){
+                displayDistance();
+            }
         }
     };
 
@@ -400,4 +434,53 @@ public class MapWorkoutFragment extends Fragment
                 Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED;
     }
 
+    /**
+     * Save current user every one minute
+     *
+     * @param userManager The Content Provider
+     */
+    private void saveUserPeriodically(final UserManager userManager){
+        new Timer().scheduleAtFixedRate(new TimerTask() {
+            @Override
+            public void run() {
+                Log.i(TAG, "saveUserPeriodically()");
+                UserProfile mCurrentUser = WorkoutManager.sharedInstance().getCurrentUser();
+                if(mCurrentUser != null){
+                    userManager.updateUser(mCurrentUser);
+                    UserManager.saveUserPreference(getContext(), mCurrentUser);
+                }
+            }
+        }, 0, StopWatch.TWO_MINUTE);
+    }
+
+    public static class State{
+        static boolean workoutStarted = false;
+        static boolean onLocationBusy = false;
+        static boolean onStepBusy = false;
+        static boolean serviceStarted = false;
+    }
+
+
+    interface OnListener{
+        void stopService();
+        void startService();
+    }
+
+    @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        Activity a;
+        if (context instanceof Activity){
+            Log.i(TAG, "onAttach()");
+            a = (Activity) context;
+            mListener = (OnListener) a;
+        }
+
+    }
+    @Override
+    public void onDetach() {
+        Log.i(TAG, "onDetach()");
+        super.onDetach();
+        mListener = null;
+    }
 }

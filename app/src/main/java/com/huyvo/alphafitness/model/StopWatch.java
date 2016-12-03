@@ -5,8 +5,9 @@ import java.util.List;
 
 public class StopWatch {
 
-    public final static int ONE_MINUTE = 10000;
-
+    public final static int ONE_MINUTE  = 3000;// 60000;
+    public final static int FIVE_MINUTE = 300000;
+    public final static int TWO_MINUTE = 120000;
 
 
 

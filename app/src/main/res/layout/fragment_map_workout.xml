@@ -31,7 +31,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textAppearance="?android:attr/textAppearanceLarge"
-                android:text="@string/_0"
+                android:text="@string/_0_0_miles"
                 android:id="@+id/distance_text_view"/>
 
         <TextView

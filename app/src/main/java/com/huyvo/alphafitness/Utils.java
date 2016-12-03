@@ -1,4 +1,4 @@
-package com.huyvo.alphafitness.model;
+package com.huyvo.alphafitness;
 
 import android.content.Context;
 import android.location.Address;
@@ -27,29 +27,7 @@ public class Utils {
         locationB.setLongitude(l2.longitude);
         return locationA.distanceTo(locationB) * METERS_TO_MILES;
     }
-    public static String getAddress(LatLng ll, Context context){
-        try {
-            Geocoder geocoder = new Geocoder(context);
-            List<Address> addresses = geocoder.getFromLocation(ll.latitude, ll.longitude, 1);
 
-            String address = addresses.get(0).getAddressLine(0);
-            String city = addresses.get(0).getAddressLine(1);
-            String country = addresses.get(0).getAddressLine(2);
-
-            return address;
-
-        }catch (Exception ignored){}
-
-        return null;
-    }
-
-    public static void simulateWork(){
-        try {
-            Thread.sleep(1000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
 
     public static double calculateDistance(List<LatLng> theRoute) {
         double sum = 0;
@@ -76,7 +54,24 @@ public class Utils {
 
         return null;
     }
+    public LatLng getLocationFromAddress(Context context, String strAddress){
 
+        Geocoder coder = new Geocoder(context);
+        List<Address> address;
+
+        try {
+            address = coder.getFromLocationName(strAddress,5);
+            if (address==null) {
+                return null;
+            }
+            Address location=address.get(0);
+
+            return new LatLng(location.getLatitude(), location.getLongitude());
+        }catch (Exception ex){
+            return null;
+        }
+
+    }
     public void onMapSearch(String theAddress, GoogleMap mMap, Context c) {
 
         String location = theAddress;

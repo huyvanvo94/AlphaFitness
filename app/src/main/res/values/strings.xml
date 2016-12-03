@@ -13,7 +13,10 @@
          android.hardware.sensor.stepcounter
    </string>
 
-
+    <string-array name="gender_array">
+        <item>Male</item>
+        <item>Female</item>
+    </string-array>
 <string name="step_detector">
          android.hardware.sensor.stepdetector
    </string>
@@ -24,4 +27,11 @@
     <string name="if_user_name_does_not_exist_then_a_new_user_of_that_name_will_be_created">If user name does not exist, then a new user of that name will be created.</string>
     <string name="done">Done</string>
     <string name="back">Back</string>
+    <string name="average">Average:</string>
+    <string name="min_per_miles">min per miles</string>
+    <string name="max">Max:</string>
+    <string name="min">Min:</string>
+    <string name="_0_0_miles">0.0 miles</string>
+    <string name="set_user">Set User</string>
+    <string name="set_weight">Set weight</string>
 </resources>

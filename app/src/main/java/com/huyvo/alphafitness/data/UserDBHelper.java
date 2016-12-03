@@ -122,6 +122,7 @@ public class UserDBHelper extends SQLiteOpenHelper {
                 null  // orderBy
         );
 
+        cursor.close();
         return new UserProfileCursorWrapper(cursor);
     }
 }
